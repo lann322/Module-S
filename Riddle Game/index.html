@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Módulo S - Edición de Ingeniería Avanzada</title>
+    <style>
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #060607; font-family: 'Segoe UI', sans-serif; }
+        canvas { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; z-index: 1; display: block; }
+
+        /* --- MENÚ PRINCIPAL --- */
+        #main-menu {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, #15171a 0%, #040506 100%);
+            z-index: 100; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; color: white;
+            transition: opacity 0.4s ease;
+        }
+        .menu-title { font-size: 3rem; font-weight: bold; letter-spacing: 3px; color: #00ff00; margin-bottom: 5px; text-shadow: 0 0 20px rgba(0,255,0,0.3); }
+        .menu-subtitle { font-size: 1.1rem; color: #aaa; margin-bottom: 30px; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .menu-btn {
+            background: transparent; border: 2px solid #00ff00; color: #00ff00;
+            padding: 14px 40px; font-size: 16px; font-weight: bold; border-radius: 8px;
+            cursor: pointer; width: 280px; text-transform: uppercase; margin-bottom: 15px; transition: 0.3s;
+        }
+        .menu-btn:hover { background: #00ff00; color: #0a0a0a; box-shadow: 0 0 25px rgba(0,255,0,0.4); transform: scale(1.03); }
+        
+        /* Selector de idiomas */
+        .lang-container { 
+            margin-bottom: 35px; 
+            display: grid; 
+            grid-template-columns: repeat(3, 120px); 
+            gap: 10px; 
+            justify-content: center; 
+        }
+        .lang-btn {
+            background: #1a1a1a; border: 1px solid #444; color: white; padding: 10px 0;
+            border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 12px; text-align: center; transition: 0.2s;
+        }
+        .lang-btn:hover { border-color: #aaa; }
+        .lang-btn.active { border-color: #ff9d00; color: #ff9d00; background: rgba(255,157,0,0.1); }
+
+        /* Popup de Información */
+        #info-popup {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 110;
+        }
+        .info-content {
+            background: #111; border: 2px solid #ff9d00; border-radius: 12px;
+            padding: 30px; width: 520px; max-height: 70vh; overflow-y: auto; color: #eee;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.9); line-height: 1.6;
+        }
+        .info-content h2 { margin-top: 0; color: #ff9d00; }
+        .close-info-btn { background: #ff9d00; color: black; margin-top: 20px; }
+
+        /* --- TOAST DE VICTORIA СВЕРХУ --- */
+        #win-toast {
+            position: absolute; top: -100px; left: 50%; transform: translateX(-50%);
+            background: rgba(10, 35, 10, 0.95); border: 2px solid #00ff00; border-radius: 8px;
+            padding: 12px 30px; color: white; text-align: center; z-index: 120;
+            box-shadow: 0 0 30px rgba(0,255,0,0.4); 
+            pointer-events: none; /* Фикс: Мышка кликает сквозь уведомление, не блокируя кнопки */
+            transition: top 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s;
+            opacity: 0; display: flex; flex-direction: column; align-items: center; gap: 4px;
+        }
+        #win-toast.show { top: 30px; opacity: 1; }
+        .toast-title { font-size: 1.2rem; font-weight: bold; color: #00ff00; text-transform: uppercase; letter-spacing: 1px; }
+        .toast-text { font-size: 0.9rem; color: #ccc; }
+
+        /* --- INTERFAZ DEL JUEGO --- */
+        .panel {
+            position: absolute; color: white; background: rgba(5, 5, 5, 0.94);
+            padding: 20px; border-radius: 12px; border: 1px solid #3a3d40;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.85); visibility: hidden; z-index: 10 !important;
+        }
+        #ui { top: 20px; left: 20px; width: 260px; border-left: 4px solid #00ff00; }
+        #levels-menu { top: 20px; left: 320px; width: 320px; border-left: 4px solid #ff9d00; }
+        #inventory { top: 20px; right: 20px; width: 220px; border-left: 4px solid #00ff00; text-align: center; }
+        
+        h3 { margin: 0 0 15px 0; font-size: 14px; letter-spacing: 1px; text-transform: uppercase; color: #eee; }
+        button {
+            border: none; padding: 12px;
+            border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%;
+            text-transform: uppercase; margin-top: 10px; transition: 0.2s;
+        }
+        .btn-spawn { background: #00ff00; color: #0a0a0a; }
+        .btn-spawn:hover { background: #00dd00; box-shadow: 0 0 15px rgba(0,255,0,0.3); }
+        .btn-hint { background: #ff9d00; color: #0a0a0a; }
+        .btn-hint:hover { background: #e08b00; box-shadow: 0 0 15px rgba(255,157,0,0.3); }
+        .btn-reset { background: #ff4444; color: white; }
+        .btn-reset:hover { background: #dd3333; box-shadow: 0 0 15px rgba(255,68,68,0.3); }
+        button:disabled { background: #333; color: #666; cursor: not-allowed; box-shadow: none !important; }
+        
+        select {
+            width: 100%; padding: 12px; background: #1a1a1a; color: white;
+            border: 1px solid #555; border-radius: 6px; cursor: pointer; font-size: 14px; outline: none;
+        }
+        select:focus { border-color: #ff9d00; }
+        .count-tag { font-size: 1.4em; color: #00ff00; font-weight: bold; margin: 10px 0; display: block; }
+        kbd { color: #00ff00; background: #222; padding: 2px 5px; border-radius: 4px; border: 1px solid #444; }
+        .highlight { color: #ff9d00; }
+        .desc { font-size: 12px; color: #aaa; margin-top: 15px; line-height: 1.5; }
+        
+        #back-to-menu-btn {
+            position: absolute; bottom: 85px; left: 20px; width: 160px;
+            background: #222; color: #ccc; border: 1px solid #444; font-size: 12px; z-index: 15 !important; visibility: hidden;
+        }
+        #back-to-menu-btn:hover { background: #333; color: white; border-color: #666; }
+
+        #audio-controls-panel {
+            position: absolute; bottom: 20px; left: 20px; width: 160px;
+            background: rgba(0, 0, 0, 0.85); border: 1px solid #444; border-radius: 8px;
+            padding: 8px 12px; display: flex; align-items: center; justify-content: space-between;
+            z-index: 15 !important; visibility: hidden; box-sizing: border-box;
+        }
+        #mute-btn {
+            background: #333; color: #00ff00; font-size: 10px; font-weight: bold;
+            padding: 6px 8px; border-radius: 4px; cursor: pointer; border: 1px solid #555;
+            width: auto; margin: 0; text-transform: uppercase;
+        }
+        #mute-btn:hover { background: #444; color: #00ff00; }
+        #volume-slider { width: 75px; accent-color: #00ff00; cursor: pointer; margin: 0; }
+    </style>
+</head>
+<body>
+
+    <audio id="bg-music" src="LurkingSloth-320bit(chosic.com).mp3" loop></audio>
+
+    <div id="main-menu">
+        <div class="menu-title" id="txt-menu-title">MÓDULO S</div>
+        <div class="menu-subtitle" id="txt-menu-subtitle">Edición de Ingeniería</div>
+        
+        <div class="lang-container">
+            <button class="lang-btn" id="btn-lang-en">ENGLISH</button>
+            <button class="lang-btn active" id="btn-lang-es">ESPAÑOL</button>
+            <button class="lang-btn" id="btn-lang-fr">FRANÇAIS</button>
+            <button class="lang-btn" id="btn-lang-pt">PORTUGUÊS</button>
+            <button class="lang-btn" id="btn-lang-de">DEUTSCH</button>
+            <button class="lang-btn" id="btn-lang-ru">РУССКИЙ</button>
+        </div>
+
+        <button class="menu-btn" id="btn-menu-play">Play</button>
+        <button class="menu-btn" id="btn-menu-info" style="border-color: #ff9d00; color: #ff9d00;">Info</button>
+    </div>
+
+    <div id="info-popup">
+        <div class="info-content">
+            <h2 id="txt-popup-title">Info</h2>
+            <div id="txt-popup-body">...</div>
+            <button class="menu-btn close-info-btn" id="btn-popup-close">Close</button>
+        </div>
+    </div>
+
+    <div id="win-toast">
+        <div class="toast-title" id="txt-toast-title">¡Victoria!</div>
+        <div class="toast-text" id="txt-toast-text">Has completado la patente con éxito.</div>
+    </div>
+
+    <button id="back-to-menu-btn">← Menú Principal</button>
+
+    <div id="audio-controls-panel">
+        <button id="mute-btn">Mute</button>
+        <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="0.25">
+    </div>
+
+    <div id="ui" class="panel">
+        <h3 id="txt-panel-instruct-title">INSTRUCCIONES</h3>
+        <p style="font-size: 13px; line-height: 1.6;" id="txt-panel-instruct-body">...</p>
+    </div>
+
+    <div id="levels-menu" class="panel">
+        <h3 class="highlight" id="txt-panel-levels-title">MIS PATENTES</h3>
+        <select id="level-select">
+            <option value="none">Juego Libre</option>
+            <option value="casa">01. La Casa</option>
+            <option value="mirador">02. El Mirador</option>
+            <option value="equis_3d">03. La X (3D)</option>
+            <option value="torre">04. La Torre</option>
+            <option value="demonio">05. El Demonio</option>
+        </select>
+        <div class="desc" id="txt-panel-levels-desc">...</div>
+    </div>
+
+    <div id="inventory" class="panel">
+        <h3 id="txt-panel-inv-title">INVENTARIO</h3>
+        <span class="count-tag"><span id="counter">16</span> / 16</span>
+        <button id="add-btn" class="btn-spawn">Añadir Módulo</button>
+        <button id="hint-btn" class="btn-hint">Pista</button>
+        <button id="reset-btn" class="btn-reset">Reiniciar Nivel</button>
+    </div>
+
+<script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+</script>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+    // --- PACKS DE TRADUCCIÓN ---
+    const translations = {
+        en: {
+            menuTitle: "MODULE S", menuSubtitle: "Engineering Edition", playBtn: "Play Game", infoBtn: "Information", closeBtn: "Close Info",
+            popupTitle: "About the Patent",
+            popupBody: `<p>This software is a 3D simulation for testing volumetric structures using the rigid <b>Large "S" Module (S-Tetromino)</b>.</p><p>Unlike standard building blocks, each spawned module represents an indivisible rigid part composed of 4 interlocking grid segments.</p><p><b>Goal:</b> Use the 3D translation and axial rotation tools to assemble and fit your modules perfectly within the semi-transparent white "ghost" silhouette.</p>`,
+            panelInstructTitle: "CONTROLS",
+            panelInstructBody: `• <b>Left Click:</b> Drag module<br>• <b>Wheel (dragging):</b> Change Height <kbd>Y</kbd> (XZ locked)<br>• <b>Wheel (free):</b> Camera Zoom<br>• <b>Right Click:</b> Rotate view<br>• <kbd>R</kbd> <kbd>T</kbd> <kbd>Y</kbd> : Rotate module 90°`,
+            panelLevelsTitle: "PATENT SCHEMES",
+            panelLevelsDesc: "Models loaded from coordinates. Active state of elements for each challenge is retained automatically when switching fields.",
+            panelInvTitle: "INVENTORY", btnSpawn: "Spawn Module", btnHint: "Hint", btnReset: "Reset Level", btnBack: "← Main Menu", mute: "Mute", unmute: "Unmute",
+            winTitle: "Level Complete!", winText: "You have assembled the architecture with surgical precision.",
+            levelsOpts: [
+                { value: "none", text: "Free Build Mode" }, { value: "casa", text: "01. The House" }, { value: "mirador", text: "02. The Outlook Tower" },
+                { value: "equis_3d", text: "03. 3D Cross Structure" }, { value: "torre", text: "04. Modular Tower" }, { value: "demonio", text: "05. The Demon Shape" }
+            ]
+        },
+        es: {
+            menuTitle: "MÓDULO S", menuSubtitle: "Edición de Ingeniería", playBtn: "Jugar Partida", infoBtn: "Información", closeBtn: "Cerrar Info",
+            popupTitle: "Acerca de la Patente",
+            popupBody: `<p>Este software es un simulador tridimensional interactivo para el desarrollo y verificación de las estructuras volumétricas del <b>Módulo "S" Grande (Tetramino S)</b>.</p><p>A diferencia de los bloques cúbicos estándar, cada módulo aquí generado representa una pieza rígida indivisible de 4 segmentos entrelazados en el espacio.</p><p><b>Objetivo:</b> Utilizar las herramientas de traslación tridimensional y rotación axial para encajar las piezas dentro del volumen del "fantasma" blanco.</p>`,
+            panelInstructTitle: "INSTRUCCIONES",
+            panelInstructBody: `• <b>Clic Izquierdo:</b> Arrastrar módulo<br>• <b>Rueda (arrastrando):</b> Altura <kbd>Y</kbd> (XZ bloqueado)<br>• <b>Rueda (libre):</b> Zoom de cámara<br>• <b>Clic Derecho:</b> Rotar cámara<br>• <kbd>R</kbd> <kbd>T</kbd> <kbd>Y</kbd> : Rotar módulo 90°`,
+            panelLevelsTitle: "MIS PATENTES",
+            panelLevelsDesc: "Modelos extraídos del editor real. Las construcciones de cada nivel se retienen automáticamente al cambiar de escenario.",
+            panelInvTitle: "INVENTARIO", btnSpawn: "Añadir Módulo", btnHint: "Pista", btnReset: "Reiniciar Nivel", btnBack: "← Menú Principal", mute: "Mute", unmute: "Sonido",
+            winTitle: "¡Nivel Completado!", winText: "Has ensamblado la arquitectura con precisión quirúrgica.",
+            levelsOpts: [
+                { value: "none", text: "Juego Libre" }, { value: "casa", text: "01. La Casa" }, { value: "mirador", text: "02. El Mirador" },
+                { value: "equis_3d", text: "03. La X (3D)" }, { value: "torre", text: "04. La Torre" }, { value: "demonio", text: "05. El Demonio" }
+            ]
+        },
+        fr: {
+            menuTitle: "MODULE S", menuSubtitle: "Édition d'Ingénierie", playBtn: "Jouer", infoBtn: "Informations", closeBtn: "Fermer l'info",
+            popupTitle: "À propos du brevet",
+            popupBody: `<p>Ce logiciel est un simulateur 3D interactif conçu pour tester les structures volumétriques du <b>Grand Module "S" (S-Tétromino)</b>.</p><p>Chaque module généré constitue un bloc solide et indivisible de 4 segments imbriqués.</p><p><b>Objectif:</b> Déplacer et pivoter les blocs en 3D afin de les insérer parfaitement à l'intérieur de la silhouette "fantôme" blanche.</p>`,
+            panelInstructTitle: "COMMANDES",
+            panelInstructBody: `• <b>Clic gauche:</b> Déplacer le bloc<br>• <b>Molette (en prise):</b> Ajuster Hauteur <kbd>Y</kbd> (axes XZ bloqués)<br>• <b>Molette (libre):</b> Zoom caméra<br>• <b>Clic droit:</b> Pivoter la caméra<br>• <kbd>R</kbd> <kbd>T</kbd> <kbd>Y</kbd> : Rotation axiale 90°`,
+            panelLevelsTitle: "PLANS BREVETÉS",
+            panelLevelsDesc: "Modèles chargés via coordonnées. Vos constructions sur chaque niveau restent mémorisées lors du changement de zone.",
+            panelInvTitle: "INVENTAIRE", btnSpawn: "Ajouter Module", btnHint: "Indice", btnReset: "Réinitialiser", btnBack: "← Menu Principal", mute: "Muet", unmute: "Son",
+            winTitle: "Niveau Réussi!", winText: "Vous avez assemblé l'architecture avec une précision chirurgicale.",
+            levelsOpts: [
+                { value: "none", text: "Construction Libre" }, { value: "casa", text: "01. La Maison (Casa)" }, { value: "mirador", text: "02. Le Belvédère" },
+                { value: "equis_3d", text: "03. Croix Tridimensionnelle" }, { value: "torre", text: "04. La Tour Modulaire" }, { value: "demonio", text: "05. La Forme du Démon" }
+            ]
+        },
+        pt: {
+            menuTitle: "MÓDULO S", menuSubtitle: "Edição de Engenharia", playBtn: "Iniciar Jogo", infoBtn: "Informações", closeBtn: "Fechar Info",
+            popupTitle: "Sobre a Patente",
+            popupBody: `<p>Este software é um simulador tridimensional interativo para o desenvolvimento e verificação das estruturas volumétricas do <b>Módulo "S" Grande (Tetraminó S)</b>.</p><p>Ao contrário dos blocos cúbicos padrão, cada módulo gerado aqui representa uma peça rígida indivisível de 4 segmentos interconectados no espaço.</p><p><b>Objetivo:</b> Utilizar as ferramentas de translação tridimensional e rotação axial para encaixar as peças perfeitamente dentro del volume da silhueta "fantasma" branca.</p>`,
+            panelInstructTitle: "INSTRUÇÕES",
+            panelInstructBody: `• <b>Clique Esquerdo:</b> Arrastrar módulo<br>• <b>Roda (arrastando):</b> Ajustar Altura <kbd>Y</kbd> (XZ bloqueado)<br>• <b>Roda (livre):</b> Zoom da câmera<br>• <b>Clique Direito:</b> Rotar câmera<br>• <kbd>R</kbd> <kbd>T</kbd> <kbd>Y</kbd> : Rotar módulo 90°`,
+            panelLevelsTitle: "MINHAS PATENTES",
+            panelLevelsDesc: "Modelos extraídos do editor real. As construções de cada nível são salvas automaticamente ao mudar de cenário.",
+            panelInvTitle: "INVENTÁRIO", btnSpawn: "Adicionar Módulo", btnHint: "Dica", btnReset: "Reiniciar Nível", btnBack: "← Menu Principal", mute: "Mudo", unmute: "Áudio",
+            winTitle: "Nível Concluído!", winText: "Você montou a arquitetura com precisão cirúrgica.",
+            levelsOpts: [
+                { value: "none", text: "Modo Construção Livre" }, { value: "casa", text: "01. A Casa (Casa)" }, { value: "mirador", text: "02. O Mirante" },
+                { value: "equis_3d", text: "03. A Cruz (3D)" }, { value: "torre", text: "04. A Torre Modular" }, { value: "demonio", text: "05. A Forma do Demônio" }
+            ]
+        },
+        de: {
+            menuTitle: "MODUL S", menuSubtitle: "Ingenieur-Edition", playBtn: "Spiel Starten", infoBtn: "Informationen", closeBtn: "Schließen",
+            popupTitle: "Über das Patent",
+            popupBody: `<p>Diese Software ist eine interaktive 3D-Simulation zur Überprüfung der volumetrischen Anordnungen des starren <b>Großen "S"-Moduls (S-Tetromino)</b>.</p><p>Im Gegensatz zu Standardblöcken bildet jedes Modul ein unteilbares, starres Bauteil aus 4 fest verbundenen Segmenten.</p><p><b>Ziel:</b> Nutzen Sie die 3D-Verschiebung und Achsenrotation, um die farbigen Module präzise in die weiße, transparente Silhouette einzufügen.</p>`,
+            panelInstructTitle: "STEUERUNG",
+            panelInstructBody: `• <b>Linksklick + Halten:</b> Modul bewegen<br>• <b>Mausrad (beim Halten):</b> Höhe ändern <kbd>Y</kbd> (XZ-Achsen fixiert)<br>• <b>Mausrad (frei):</b> Kamera-Zoom<br>• <b>Rechtsklick + Halten:</b> Kamera drehen<br>• <kbd>R</kbd> <kbd>T</kbd> <kbd>Y</kbd> : Modul um 90° rotieren`,
+            panelLevelsTitle: "PATENT-VORLAGEN",
+            panelLevelsDesc: "Koordinatenbasierte Modelle. Ihre Baustände auf jedem Level werden beim Wechsel der Vorlage automatisch gesichert.",
+            panelInvTitle: "INVENTAR", btnSpawn: "Modul Hinzufügen", btnHint: "Hinweis", btnReset: "Level Zurücksetzen", btnBack: "← Hauptmenü", mute: "Stumm", unmute: "Ton An",
+            winTitle: "Level Erfolgreich!", winText: "Sie haben die Architektur mit chirurgischer Präzision zusammengebaut.",
+            levelsOpts: [
+                { value: "none", text: "Freies Bauen" }, { value: "casa", text: "01. Das Haus (Casa)" }, { value: "mirador", text: "02. Der Aussichtsturm" },
+                { value: "equis_3d", text: "03. Dreidimensionales Kreuz" }, { value: "torre", text: "04. Modularer Turm" }, { value: "demonio", text: "05. Die Dämonenform" }
+            ]
+        },
+        ru: {
+            menuTitle: "МОДУЛЬ S", menuSubtitle: "Инженерное Издание", playBtn: "Играть", infoBtn: "Информация", closeBtn: "Закрыть инфо",
+            popupTitle: "О Патенте Игры",
+            popupBody: `<p>Данное ПО представляет собой интерактивный 3D-симулятор для проектирования и проверки объемных структур из <b>Большого Модуля "S" (S-тетрамино)</b>.</p><p>В отличие от обычных кубиков, каждый создаваемый модуль является жесткой неделимой деталью из 4 сегментов.</p><p><b>Цель:</b> Используя инструменты пространственного перемещения и осевого вращения, уложить S-детали внутрь белого силуэта-«призрака».</p>`,
+            panelInstructTitle: "ИНСТРУКЦИЯ",
+            panelInstructBody: `• <b>ЛКМ:</b> Перетащить модуль<br>• <b>Колесо (зажав деталь):</b> Высота <kbd>Y</kbd> (оси XZ заблокированы)<br>• <b>Колесо (свободно):</b> Зум камеры<br>• <b>ПКМ:</b> Вращение обзора камеры<br>• <kbd>R</kbd> <kbd>T</kbd> <kbd>Y</kbd> : Поворот модуля на 90°`,
+            panelLevelsTitle: "МОИ ПАТЕНТЫ",
+            panelLevelsDesc: "Чертежи экспортированы из реального редактора. Постройки на каждом уровне сохраняются автоматически при переключении.",
+            panelInvTitle: "ИНВЕНТАРЬ", btnSpawn: "Взять Модуль", btnHint: "Подсказка", btnReset: "Сбросить Уровень", btnBack: "← Главное Меню", mute: "Выкл", unmute: "Звук",
+            winTitle: "Уровень Пройден!", winText: "Вы воссоздали архитектурный узел с хирургической точностью.",
+            levelsOpts: [
+                { value: "none", text: "Свободная игра" }, { value: "casa", text: "01. Дом (Casa)" }, { value: "mirador", text: "02. Смотровая Вышка" },
+                { value: "equis_3d", text: "03. 3D Крест (X)" }, { value: "torre", text: "04. Башня (Torre)" }, { value: "demonio", text: "05. Демон (Demonio)" }
+            ]
+        }
+    };
+
+    let currentLang = 'es';
+    const bgMusic = document.getElementById('bg-music');
+    const volumeSlider = document.getElementById('volume-slider');
+    const muteBtn = document.getElementById('mute-btn');
+    let isMuted = false;
+    let savedVolume = 0.25;
+
+    bgMusic.volume = savedVolume;
+
+    function setLanguage(lang) {
+        currentLang = lang;
+        ['en','es','fr','pt','de','ru'].forEach(l => {
+            const btn = document.getElementById(`btn-lang-${l}`);
+            if(btn) btn.classList.toggle('active', l === lang);
+        });
+        
+        const t = translations[lang];
+        document.getElementById('txt-menu-title').innerText = t.menuTitle;
+        document.getElementById('txt-menu-subtitle').innerText = t.menuSubtitle;
+        document.getElementById('btn-menu-play').innerText = t.playBtn;
+        document.getElementById('btn-menu-info').innerText = t.infoBtn;
+        document.getElementById('txt-popup-title').innerText = t.popupTitle;
+        document.getElementById('txt-popup-body').innerHTML = t.popupBody;
+        document.getElementById('btn-popup-close').innerText = t.closeBtn;
+
+        document.getElementById('txt-panel-instruct-title').innerText = t.panelInstructTitle;
+        document.getElementById('txt-panel-instruct-body').innerHTML = t.panelInstructBody;
+        document.getElementById('txt-panel-levels-title').innerText = t.panelLevelsTitle;
+        document.getElementById('txt-panel-levels-desc').innerText = t.panelLevelsDesc;
+        document.getElementById('txt-panel-inv-title').innerText = t.panelInvTitle;
+        document.getElementById('add-btn').innerText = t.btnSpawn;
+        document.getElementById('hint-btn').innerText = t.btnHint;
+        document.getElementById('reset-btn').innerText = t.btnReset;
+        document.getElementById('back-to-menu-btn').innerText = t.btnBack;
+        
+        document.getElementById('txt-toast-title').innerText = t.winTitle;
+        document.getElementById('txt-toast-text').innerText = t.winText;
+        muteBtn.innerText = isMuted ? t.unmute : t.mute;
+
+        const select = document.getElementById('level-select');
+        const prevValue = select.value || "none";
+        select.innerHTML = '';
+        t.levelsOpts.forEach(opt => {
+            const el = document.createElement('option');
+            el.value = opt.value;
+            el.innerText = opt.text;
+            select.appendChild(el);
+        });
+        select.value = prevValue;
+    }
+
+    // --- ENLACES DEL DOM ---
+    ['en','es','fr','pt','de','ru'].forEach(l => {
+        document.getElementById(`btn-lang-${l}`).addEventListener('click', () => setLanguage(l));
+    });
+
+    document.getElementById('btn-menu-info').addEventListener('click', () => {
+        document.getElementById('info-popup').style.display = 'flex';
+    });
+    document.getElementById('btn-popup-close').addEventListener('click', () => {
+        document.getElementById('info-popup').style.display = 'none';
+    });
+    
+    document.getElementById('btn-menu-play').addEventListener('click', () => {
+        bgMusic.play().catch(err => console.log("Audio deferred:", err));
+        document.getElementById('main-menu').style.opacity = 0;
+        setTimeout(() => {
+            document.getElementById('main-menu').style.display = 'none';
+            document.querySelectorAll('.panel').forEach(p => p.style.visibility = 'visible');
+            document.getElementById('back-to-menu-btn').style.visibility = 'visible';
+            document.getElementById('audio-controls-panel').style.visibility = 'visible';
+            triggerResize();
+        }, 450);
+    });
+
+    document.getElementById('back-to-menu-btn').addEventListener('click', () => {
+        document.getElementById('main-menu').style.display = 'flex';
+        setTimeout(() => { document.getElementById('main-menu').style.opacity = 1; }, 10);
+        document.querySelectorAll('.panel').forEach(p => p.style.visibility = 'hidden');
+        document.getElementById('back-to-menu-btn').style.visibility = 'hidden';
+        document.getElementById('audio-controls-panel').style.visibility = 'hidden';
+        document.getElementById('win-toast').classList.remove('show');
+    });
+
+    volumeSlider.addEventListener('input', (e) => {
+        savedVolume = parseFloat(e.target.value);
+        if (!isMuted) bgMusic.volume = savedVolume;
+    });
+
+    muteBtn.addEventListener('click', () => {
+        isMuted = !isMuted;
+        bgMusic.muted = isMuted;
+        muteBtn.innerText = isMuted ? translations[currentLang].unmute : translations[currentLang].mute;
+        muteBtn.style.borderColor = isMuted ? "#ff4444" : "#555";
+        muteBtn.style.color = isMuted ? "#ff4444" : "#00ff00";
+    });
+
+    // --- ENGINE 3D (THREE.JS DE CAPA BASE) ---
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x040405);
+    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const initialPos = new THREE.Vector3(22, 22, 22);
+    camera.position.copy(initialPos);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    document.body.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.enablePan = false;   
+    controls.enableZoom = false; 
+    controls.minDistance = 5;
+    controls.maxDistance = 90;
+    controls.mouseButtons = { LEFT: null, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+
+    // --- ILUMINACIÓN PROFESIONAL ---
+    scene.add(new THREE.AmbientLight(0xffffff, 0.35));
+    const light = new THREE.PointLight(0xffffff, 320, 120);
+    light.position.set(15, 45, 15);
+    scene.add(light);
+
+    const rimLight = new THREE.DirectionalLight(0x00ffff, 0.5);
+    rimLight.position.set(-25, 25, -25);
+    scene.add(rimLight);
+
+    // Rejilla industrial equilibrada
+    scene.add(new THREE.GridHelper(40, 40, 0x2a2b2d, 0x151617));
+
+    const dragPlane = new THREE.Mesh(new THREE.PlaneGeometry(500, 500), new THREE.MeshBasicMaterial({ visible: false }));
+    dragPlane.rotation.x = -Math.PI / 2;
+    scene.add(dragPlane);
+
+    const ghostGroup = new THREE.Group();
+    scene.add(ghostGroup);
+
+    const levelSaves = {
+        "none": { modules: [], piecesLeft: 16, completed: false }, 
+        "casa": { modules: [], piecesLeft: 16, completed: false },
+        "mirador": { modules: [], piecesLeft: 16, completed: false }, 
+        "equis_3d": { modules: [], piecesLeft: 16, completed: false },
+        "torre": { modules: [], piecesLeft: 16, completed: false }, 
+        "demonio": { modules: [], piecesLeft: 16, completed: false }
+    };
+
+    let currentLevel = "none";
+    let activeModules = [];
+    let piecesLeft = 16;
+    
+    let selectedObject = null;
+    let isDragging = false;
+    let isWheelActive = false;
+    let wheelTimeout = null;
+    let lastWheelTime = 0;
+    const wheelCooldown = 120;
+    
+    let currentHintModuleCoords = [];
+    let hintTimer = null;
+    let hintBlinkInterval = null;
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    const offset = new THREE.Vector3();
+
+    const levels = {
+        "casa": [
+            [-4,0,-4],[-4,0,-3],[-4,1,-3],[-4,1,-2],[0,0,0],[0,0,-1],[0,1,-1],[0,1,-2],
+            [0,0,-2],[0,0,-3],[0,1,-3],[0,1,-4],[0,0,-4],[-1,0,-4],[-1,1,-4],[-2,1,-4],
+            [-2,0,-4],[-3,0,-4],[-3,1,-4],[-4,1,-4],[-4,0,-2],[-4,0,-1],[-4,1,-1],[-4,1,0],
+            [-4,0,0],[-3,0,0],[-3,1,0],[-2,1,0],[-2,0,0],[-1,0,0],[-1,1,0],[0,1,0]
+        ],
+        "mirador": [
+            [-2,0,-1],[-1,0,-1],[-1,1,-1],[0,1,-1],[5,0,-1],[4,0,-1],[4,1,-1],[3,1,-1],
+            [-1,0,-2],[0,0,-2],[0,0,-1],[1,0,-1],[2,0,-1],[3,0,-1],[3,0,-2],[4,0,-2],
+            [-1,1,-2],[0,1,-2],[0,2,-2],[1,2,-2],[4,1,-2],[3,1,-2],[3,2,-2],[2,2,-2],
+            [5,0,-3],[5,0,-2],[5,1,-2],[5,1,-1],[-2,0,-3],[-2,0,-2],[-2,1,-2],[-2,1,-1]
+        ],
+        "equis_3d": [
+            [0,3,0],[0,4,0],[0,4,1],[0,5,1],[1,3,-1],[1,4,-1],[2,4,-1],[2,5,-1],
+            [-1,3,-1],[-1,4,-1],[-2,4,-1],[-2,5,-1],[0,3,-2],[0,4,-2],[0,4,-3],[0,5,-3],
+            [0,0,1],[0,1,1],[0,1,0],[0,2,0],[2,0,-1],[2,1,-1],[1,1,-1],[1,2,-1],
+            [0,0,-3],[0,1,-3],[0,1,-2],[0,2,-2],[-2,0,-1],[-2,1,-1],[-1,1,-1],[-1,2,-1]
+        ],
+        "torre": [
+            [0,0,1],[1,0,1],[1,1,1],[2,1,1],[2,0,1],[2,0,0],[2,1,0],[2,1,-1],
+            [2,0,-1],[1,0,-1],[1,1,-1],[0,1,-1],[0,0,-1],[0,0,0],[0,1,0],[0,1,1],
+            [2,4,-1],[2,5,-1],[2,5,0],[2,6,0],[0,4,1],[0,5,1],[0,5,0],[0,6,0],
+            [2,4,1],[2,5,1],[1,5,1],[1,6,1],[0,4,-1],[0,5,-1],[1,5,-1],[1,6,-1],
+            [0,2,1],[1,2,1],[1,3,1],[2,3,1],[2,2,1],[2,2,0],[2,3,0],[2,3,-1],
+            [0,2,-1],[0,2,0],[0,3,0],[0,3,1],[2,2,-1],[1,2,-1],[1,3,-1],[0,3,-1]
+        ],
+        "demonio": [
+            [-1,3,-2],[-1,4,-2],[-1,4,-1],[-1,5,-1],[-1,2,-1],[-1,3,-1],[-1,3,0],[-1,4,0],
+            [-1,1,-2],[-1,1,-3],[-1,0,-3],[-1,0,-4],[-1,0,2],[-1,0,1],[-1,1,1],[-1,1,0],
+            [-1,4,-4],[-1,4,-3],[-1,5,-3],[-1,5,-2],[-1,6,0],[-1,7,0],[-1,7,1],[-1,8,1],
+            [-1,4,2],[-1,4,1],[-1,5,1],[-1,5,0],[-1,6,-2],[-1,7,-2],[-1,7,-3],[-1,8,-3],
+            [-1,6,-1],[-1,7,-1],[-2,7,-1],[-2,8,-1],[-1,3,5],[-1,3,4],[-1,4,4],[-1,4,3],
+            [-1,3,-7],[-1,3,-6],[-1,4,-6],[-1,4,-5]
+        ]
+    };
+
+    function createModule() {
+        if (piecesLeft <= 0) return;
+        const group = new THREE.Group();
+        
+        const mat = new THREE.MeshStandardMaterial({ 
+            color: new THREE.Color().setHSL(Math.random(), 0.85, 0.45),
+            metalness: 0.5,
+            roughness: 0.25
+        });
+        
+        [[0,0,0], [1,0,0], [1,1,0], [2,1,0]].forEach(p => {
+            const cube = new THREE.Mesh(new THREE.BoxGeometry(0.98, 0.98, 0.98), mat);
+            cube.position.set(p[0]+0.5, p[1]+0.5, p[2]+0.5);
+            cube.add(new THREE.LineSegments(new THREE.EdgesGeometry(cube.geometry), new THREE.LineBasicMaterial({color: 0, opacity: 0.2, transparent: true})));
+            group.add(cube);
+        });
+        
+        let forwardDir = new THREE.Vector3();
+        camera.getWorldDirection(forwardDir);
+        forwardDir.y = 0; 
+        forwardDir.normalize();
+
+        let spawnX = Math.round(camera.position.x + forwardDir.x * 12);
+        let spawnZ = Math.round(camera.position.z + forwardDir.z * 12);
+        
+        if (Math.abs(spawnX) > 18) spawnX = Math.sign(spawnX) * 10;
+        if (Math.abs(spawnZ) > 18) spawnZ = Math.sign(spawnZ) * 10;
+
+        group.position.set(spawnX, 0, spawnZ);
+        
+        scene.add(group);
+        activeModules.push(group);
+        piecesLeft--;
+        updateUI();
+        
+        checkAndRefreshGhost();
+    }
+
+    function checkAndRefreshGhost() {
+        while(ghostGroup.children.length > 0) ghostGroup.remove(ghostGroup.children[0]);
+        if (currentLevel === "none" || !levels[currentLevel]) return;
+
+        const ghostMat = new THREE.MeshStandardMaterial({ 
+            color: 0xffffff, 
+            transparent: true, 
+            opacity: 0.12, 
+            depthWrite: false,
+            roughness: 0.4,
+            emissive: 0xffffff,
+            emissiveIntensity: 0.05
+        });
+        const ghostEdgesMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 });
+
+        let placedCubesMap = new Set();
+        activeModules.forEach(group => {
+            group.updateMatrixWorld(true);
+            group.children.forEach(child => {
+                if(child.type === "Mesh") {
+                    let globalPos = new THREE.Vector3();
+                    child.getWorldPosition(globalPos);
+                    placedCubesMap.add(`${Math.round(globalPos.x-0.5)},${Math.round(globalPos.y-0.5)},${Math.round(globalPos.z-0.5)}`);
+                }
+            });
+        });
+
+        let remainingGhostBlocks = 0;
+
+        levels[currentLevel].forEach(p => {
+            let coordKey = `${p[0]},${p[1]},${p[2]}`;
+            if (!placedCubesMap.has(coordKey)) {
+                remainingGhostBlocks++;
+                
+                let isPartOfHintModule = currentHintModuleCoords.some(c => c[0] === p[0] && c[1] === p[1] && c[2] === p[2]);
+
+                const m = new THREE.Mesh(
+                    new THREE.BoxGeometry(1.02, 1.02, 1.02), 
+                    isPartOfHintModule ? new THREE.MeshBasicMaterial({ color: 0x00ffff, transparent: true, opacity: 0.65 }) : ghostMat
+                );
+                m.position.set(p[0]+0.5, p[1]+0.5, p[2]+0.5);
+                m.add(new THREE.LineSegments(
+                    new THREE.EdgesGeometry(m.geometry), 
+                    isPartOfHintModule ? new THREE.LineBasicMaterial({ color: 0x00ffff, linewidth: 2.5 }) : ghostEdgesMat
+                ));
+                ghostGroup.add(m);
+            }
+        });
+
+        // FIX: El botón de regreso al menú principal NO se oculta jamás al ganar
+        if (remainingGhostBlocks === 0 && activeModules.length > 0 && !levelSaves[currentLevel].completed) {
+            levelSaves[currentLevel].completed = true;
+            
+            const toast = document.getElementById('win-toast');
+            toast.classList.add('show');
+            setTimeout(() => { toast.classList.remove('show'); }, 4000);
+        }
+        
+        return levels[currentLevel].filter(p => !placedCubesMap.has(`${p[0]},${p[1]},${p[2]}`));
+    }
+
+    function triggerHint() {
+        if (currentLevel === "none" || !levels[currentLevel]) return;
+        
+        clearTimeout(hintTimer);
+        clearInterval(hintBlinkInterval);
+        currentHintModuleCoords = [];
+
+        let remainingCubes = checkAndRefreshGhost();
+        if (!remainingCubes || remainingCubes.length === 0) return;
+
+        let targetModule = remainingCubes.slice(0, 4);
+
+        let toggle = true;
+        hintBlinkInterval = setInterval(() => {
+            currentHintModuleCoords = toggle ? targetModule : [];
+            checkAndRefreshGhost();
+            toggle = !toggle;
+        }, 300);
+
+        hintTimer = setTimeout(() => {
+            clearInterval(hintBlinkInterval);
+            currentHintModuleCoords = [];
+            checkAndRefreshGhost();
+        }, 3000);
+    }
+
+    function updateUI() {
+        document.getElementById('counter').innerText = piecesLeft;
+        document.getElementById('add-btn').disabled = (piecesLeft <= 0);
+        document.getElementById('hint-btn').disabled = (currentLevel === "none");
+    }
+
+    function switchLevel(newLevelId) {
+        clearTimeout(hintTimer);
+        clearInterval(hintBlinkInterval);
+        currentHintModuleCoords = [];
+
+        levelSaves[currentLevel].modules = [...activeModules];
+        levelSaves[currentLevel].piecesLeft = piecesLeft;
+        activeModules.forEach(m => scene.remove(m));
+        
+        currentLevel = newLevelId;
+        activeModules = levelSaves[currentLevel].modules;
+        piecesLeft = levelSaves[currentLevel].piecesLeft;
+        activeModules.forEach(m => scene.add(m));
+        
+        checkAndRefreshGhost();
+        updateUI();
+        selectedObject = null;
+    }
+
+    document.getElementById('add-btn').onclick = createModule;
+    document.getElementById('hint-btn').onclick = triggerHint;
+    document.getElementById('level-select').onchange = (e) => switchLevel(e.target.value);
+
+    document.getElementById('reset-btn').onclick = () => {
+        clearTimeout(hintTimer);
+        clearInterval(hintBlinkInterval);
+        currentHintModuleCoords = [];
+        activeModules.forEach(m => scene.remove(m));
+        levelSaves[currentLevel].modules = [];
+        levelSaves[currentLevel].piecesLeft = 16;
+        levelSaves[currentLevel].completed = false;
+        activeModules = [];
+        piecesLeft = 16;
+        selectedObject = null;
+        document.getElementById('win-toast').classList.remove('show');
+        updateUI();
+        checkAndRefreshGhost();
+    };
+
+    // --- MANEJO DE EVENTOS 3D ---
+    window.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+        const hits = raycaster.intersectObjects(activeModules, true);
+        if (hits.length > 0) {
+            let t = hits[0].object;
+            while (t.parent && t.type !== 'Group') t = t.parent;
+            isDragging = true; selectedObject = t;
+            controls.enabled = false;
+            activeModules.forEach(m => m.children.forEach(c => c.material.emissive.set(0x000000)));
+            selectedObject.children.forEach(c => c.material.emissive.set(0x222222));
+            dragPlane.position.y = selectedObject.position.y;
+            const planeHit = raycaster.intersectObject(dragPlane);
+            if (planeHit.length > 0) offset.copy(planeHit[0].point).sub(selectedObject.position);
+        } else {
+            selectedObject = null;
+            activeModules.forEach(m => m.children.forEach(c => c.material.emissive.set(0x000000)));
+        }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!isDragging || !selectedObject) return;
+        if (isWheelActive) return;
+        mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+        const hits = raycaster.intersectObject(dragPlane);
+        if (hits.length > 0) {
+            const p = hits[0].point.sub(offset);
+            selectedObject.position.x = p.x;
+            selectedObject.position.z = p.z;
+        }
+    });
+
+    window.addEventListener('wheel', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const dir = Math.sign(e.deltaY);
+        if (isDragging && selectedObject) {
+            isWheelActive = true;
+            clearTimeout(wheelTimeout);
+            wheelTimeout = setTimeout(() => { isWheelActive = false; }, 200);
+            const now = Date.now();
+            if (now - lastWheelTime > wheelCooldown) {
+                selectedObject.position.y -= dir;
+                if (selectedObject.position.y < 0) selectedObject.position.y = 0;
+                dragPlane.position.y = selectedObject.position.y;
+                raycaster.setFromCamera(mouse, camera);
+                const planeHit = raycaster.intersectObject(dragPlane);
+                if (planeHit.length > 0) offset.copy(planeHit[0].point).sub(selectedObject.position);
+                lastWheelTime = now;
+                
+                checkAndRefreshGhost();
+            }
+        } else {
+            const factor = dir > 0 ? 1.05 : 0.95;
+            camera.position.multiplyScalar(factor);
+            const dist = camera.position.length();
+            if (dist < controls.minDistance) camera.position.setLength(controls.minDistance);
+            if (dist > controls.maxDistance) camera.position.setLength(controls.maxDistance);
+        }
+    }, { passive: false });
+
+    window.addEventListener('mouseup', () => {
+        isDragging = false; isWheelActive = false;
+        clearTimeout(wheelTimeout);
+        controls.enabled = true;
+        if (selectedObject) {
+            selectedObject.position.set(Math.round(selectedObject.position.x), Math.round(selectedObject.position.y), Math.round(selectedObject.position.z));
+            checkAndRefreshGhost();
+        }
+    });
+
+    window.addEventListener('keydown', (e) => {
+        if (!selectedObject) return;
+        const a = Math.PI / 2; const k = e.key.toLowerCase();
+        if (k === 'r') selectedObject.rotation.x += a;
+        if (k === 't') selectedObject.rotation.y += a;
+        if (k === 'y') selectedObject.rotation.z += a;
+        selectedObject.position.set(Math.round(selectedObject.position.x), Math.round(selectedObject.position.y), Math.round(selectedObject.position.z));
+        
+        checkAndRefreshGhost();
+    });
+
+    function triggerResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    setLanguage('es');
+    checkAndRefreshGhost();
+
+    function animate() {
+        requestAnimationFrame(animate);
+        if (isNaN(camera.position.x)) camera.position.copy(initialPos);
+        controls.update();
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', triggerResize);
+</script>
+</body>
+</html>
